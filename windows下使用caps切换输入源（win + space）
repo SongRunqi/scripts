@@ -1,0 +1,65 @@
+# 使用步骤
+1. 安装autohashkey应用
+2. 新建文件changeSource.ahk
+3. 添加一下脚本：
+    ```ahk
+    #NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
+#Persistent
+SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
+SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
+
+; 初始化一个变量来跟踪 Caps Lock 状态
+global capsLockState := false
+
+; 加载用户32.dll
+hUser32 := DllCall("LoadLibrary", "Str", "user32.dll", "Ptr")
+
+; 获取当前输入法列表
+IMEList := IME_GetList()
+IMECount := IME_GetList("Count")
+
+; 将 Caps Lock 映射为切换输入法
+CapsLock::
+  if (IMECount > 1) {
+    IME_SelectNext()
+  }
+return
+
+; 使用 Shift + Caps Lock 来切换大小写锁定
++CapsLock::
+  capsLockState := !capsLockState
+  SetCapsLockState, % capsLockState
+return
+
+; 禁用原始的 Caps Lock 功能
+*CapsLock::return
+
+; 函数：获取输入法列表
+IME_GetList(Type := "")
+{
+  static GIL := "GetKeyboardLayoutList"
+  static GKN := "GetKeyboardLayoutName"
+  static hWnd := 0
+  static pKBL := 0
+  static sKBL := 0
+  VarSetCapacity(wData, 4, 0)
+  DllCall("User32.dll\GetKeyboardLayoutName", "Str", wData)
+  if (Type = "Count")
+    return DllCall("User32.dll\GetKeyboardLayoutList", "Int", 0, "Ptr", 0)
+  if (!hWnd) {
+    hWnd := DllCall("User32.dll\GetForegroundWindow", "Ptr")
+    pKBL := DllCall("User32.dll\GetWindowThreadProcessId", "Ptr", hWnd, "Ptr", 0)
+    sKBL := DllCall("User32.dll\GetKeyboardLayout", "UInt", pKBL)
+  }
+  return sKBL
+}
+
+; 函数：选择下一个输入法
+IME_SelectNext()
+{
+  static WM_INPUTLANGCHANGEREQUEST := 0x0050
+  static INPUTLANGCHANGE_FORWARD := 0x0002
+  SendMessage, WM_INPUTLANGCHANGEREQUEST, INPUTLANGCHANGE_FORWARD,, , A
+}
+```
+4. 双击运行
